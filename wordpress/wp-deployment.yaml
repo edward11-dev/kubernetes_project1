@@ -1,0 +1,39 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+  namespace: cep-project1
+  labels:
+    app: wordpress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      containers:
+      - name: database
+        image: wordpress:5.8.3-php7.4-apache
+        command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+        # add root password
+        envFrom:
+          - secretRef:
+              name: wp-db-secrets
+        ports:
+          - containerPort: 3306
+        volumeMounts:
+        - name: wp-data
+          mountPath: /var/lib/wordpress
+      volumes:
+      - name: wp-data
+        persistentVolumeClaim:
+          claimName: wp-pvc
+      initContainers:
+      - name: init-myservice
+        image: registry.access.redhat.com/ubi8/ubi:latest
+        command: ['sh', '-c', 'until getent hosts mysql-service; do echo waiting for mysql-service; sleep 2; done;']
